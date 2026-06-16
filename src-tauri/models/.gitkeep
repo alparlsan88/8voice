@@ -1,0 +1,6 @@
+# Whisper GGUF model dosyaları buraya konur.
+#
+# Önerilen: ggml-small.bin (~466 MB)
+# İndir: https://huggingface.co/ggerganov/whisper.cpp
+#
+# Bu dizindeki .bin/.gguf dosyaları .gitignore'a dahildir (büyük dosya).

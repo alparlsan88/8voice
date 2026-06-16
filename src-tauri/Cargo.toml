@@ -1,0 +1,59 @@
+[package]
+name = "eightvoice"
+version = "0.1.0"
+description = "Privacy-first, on-device voice dictation app"
+authors = ["8voice"]
+license = "MIT"
+edition = "2021"
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "eightvoice_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-opener = "2"
+tauri-plugin-store = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-dialog = "2"
+webview2-com = "0.38"
+windows-core = "0.61"
+
+# Ses yakalama + işleme
+cpal = "0.15"
+rubato = "0.15"
+
+# Voice Activity Detection (konuşma/sessizlik tespiti, otomatik durdurma)
+webrtc-vad = "0.4"
+
+# Transkripsiyon (on-device)
+# Not: 0.16, bindgen 0.70+ ile gelir → libclang 19+ (LLVM 22 dahil) ile uyumlu.
+whisper-rs = "0.16"
+
+# Metin enjeksiyonu
+enigo = "0.2"
+arboard = "3"
+
+# Eşzamanlama / state
+parking_lot = "0.12"
+
+# Serileştirme + hata yönetimi + loglama
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Cloud transcription (Groq Whisper API)
+reqwest = { version = "0.12", features = ["multipart", "json"] }
+
+[profile.dev]
+# whisper.cpp debug derlemesi çok yavaş; opt-level=1 hızlandırır
+opt-level = 1

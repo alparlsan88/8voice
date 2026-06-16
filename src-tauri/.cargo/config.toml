@@ -1,0 +1,4 @@
+# whisper-rs / whisper-rs-sys derlenirken bindgen, libclang'a ihtiyaç duyar.
+# Sistemdeki LLVM (C:\Program Files\LLVM) bu yola yüklenmiştir.
+[env]
+LIBCLANG_PATH = "C:\\Program Files\\LLVM\\bin"

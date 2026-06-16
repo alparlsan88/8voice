@@ -150,23 +150,25 @@ function WaveIndicator({ amplitude }: { amplitude: number }) {
     let raf = 0;
     const tick = () => {
       setTime((t) => t + 1);
-      setSmoothAmp((prev) => prev + (amplitude - prev) * 0.35);
+      setSmoothAmp((prev) => prev + (amplitude - prev) * 0.5);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [amplitude]);
 
-  // 9 bars that span the full available width.
-  const bars = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-  const phases = [0, 0.7, 1.4, 2.1, 2.8, 2.1, 1.4, 0.7, 0];
-  const factors = [0.55, 0.7, 0.82, 0.92, 1.0, 0.92, 0.82, 0.7, 0.55];
-  const base = 0.15; // calm/idle bar height fraction
+  // 15 thin bars that span the full available width for a finer look.
+  const barCount = 15;
+  const bars = Array.from({ length: barCount }, (_, i) => i);
+  const center = (barCount - 1) / 2;
+  const phases = bars.map((i) => Math.abs(i - center) * 0.6);
+  const factors = bars.map((i) => 1.0 - Math.abs(i - center) / center * 0.35);
+  const base = 0.12; // calm/idle bar height fraction
 
   return (
     <div className="flex h-5 w-full items-end justify-center gap-[1px] px-0.5">
       {bars.map((i) => {
-        const wave = 0.5 + 0.5 * Math.sin(time * 0.15 + phases[i]);
+        const wave = 0.5 + 0.5 * Math.sin(time * 0.18 + phases[i]);
         const height = base + smoothAmp * (1 - base) * wave * factors[i];
         return (
           <span

@@ -305,9 +305,15 @@ fn handle_input(
         let sum_sq: f32 = final_samples.iter().map(|&s| s * s).sum();
         (sum_sq / final_samples.len() as f32).sqrt()
     };
-    // Heuristic normalization: quiet speech ~0.02-0.05 RMS, normal ~0.05-0.15,
-    // loud >0.15. Stronger boost so even quiet speech moves the wave visibly.
-    let level = ((rms + 0.002) * 12.0).min(1.0);
+    // Log-scale normalization: human hearing / VU meters are logarithmic.
+    // Map RMS in dBFS so quiet speech is visible and loud speech caps at 1.0.
+    // -60 dBFS -> 0, -45 dBFS -> 0.25, -30 dBFS -> 0.5, -15 dBFS -> 1.0.
+    let level = if rms < 1e-6 {
+        0.0
+    } else {
+        let db = 20.0 * rms.max(1e-6).log10();
+        ((db + 60.0) / 45.0).clamp(0.0, 1.0)
+    };
     amplitude.store(level.to_bits(), Ordering::Relaxed);
 
     let mut b = buf.lock();

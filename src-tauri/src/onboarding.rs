@@ -15,7 +15,7 @@ use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager, State};
 use tokio::io::AsyncWriteExt;
 
-const HF_BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml";
+const HF_BASE_URL: &str = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main";
 
 /// Information about a downloadable Whisper model.
 #[derive(Debug, Clone, Serialize)]
@@ -146,7 +146,7 @@ pub async fn cmd_download_whisper_model(
 ) -> Result<(), String> {
     controller.set_cancelled(false);
 
-    let url = format!("{HF_BASE_URL}-{filename}");
+    let url = format!("{HF_BASE_URL}/{filename}");
     let dir = models_dir(&app).map_err(|e| e.to_string())?;
     tokio::fs::create_dir_all(&dir)
         .await

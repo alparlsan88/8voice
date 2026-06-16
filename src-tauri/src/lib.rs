@@ -37,26 +37,23 @@ pub fn run() {
         )
         .init();
 
+    // --- Audio (create before app so it can be managed early) ---
+    let (audio, audio_buf) = audio::AudioCapture::new();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
+        // --- State: register before setup so it is available during window init ---
+        .manage(StateMachine::new())
+        .manage(AppCtx {
+            audio,
+            audio_buf,
+        })
+        .manage(settings::shared(Settings::default()))
+        .manage(onboarding::DownloadController::new())
         .setup(|app| {
-            // --- State ---
-            app.manage(StateMachine::new());
-
-            // --- Audio ---
-            let (capture, buf) = audio::AudioCapture::new();
-            app.manage(AppCtx {
-                audio: capture,
-                audio_buf: buf,
-            });
-
-            // --- Settings (defaults first, bootstrap updates them) ---
-            app.manage(settings::shared(Settings::default()));
-            app.manage(onboarding::DownloadController::new());
-
             // --- Widget window: make corners truly transparent ---
             make_widget_transparent(app.handle());
 
@@ -440,8 +437,8 @@ fn cmd_get_state(state: tauri::State<'_, StateMachine>) -> (AppState, Option<Str
 }
 
 #[tauri::command]
-fn cmd_get_settings(app: AppHandle) -> Settings {
-    app.state::<Arc<RwLock<Settings>>>().read().clone()
+fn cmd_get_settings(shared: tauri::State<'_, Arc<RwLock<Settings>>>) -> Settings {
+    shared.read().clone()
 }
 
 #[tauri::command]

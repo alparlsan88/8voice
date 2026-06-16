@@ -140,35 +140,38 @@ function Spinner() {
 
 /** Wave indicator — reacts to live audio amplitude.
  *  - amplitude = 0: flat/calm bars
- *  - amplitude > 0: bars scale with the input level
+ *  - amplitude > 0: bars scale with the input level, filling the full width
  */
 function WaveIndicator({ amplitude }: { amplitude: number }) {
   const [time, setTime] = useState(0);
+  const [smoothAmp, setSmoothAmp] = useState(0);
 
   useEffect(() => {
     let raf = 0;
     const tick = () => {
       setTime((t) => t + 1);
+      setSmoothAmp((prev) => prev + (amplitude - prev) * 0.35);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [amplitude]);
 
-  const bars = [0, 1, 2, 3, 4];
-  const phases = [0, 1.2, 2.1, 3.0, 4.2];
-  const factors = [0.75, 1.0, 0.85, 1.0, 0.75];
-  const base = 0.18; // calm/idle bar height fraction
+  // 9 bars that span the full available width.
+  const bars = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  const phases = [0, 0.7, 1.4, 2.1, 2.8, 2.1, 1.4, 0.7, 0];
+  const factors = [0.55, 0.7, 0.82, 0.92, 1.0, 0.92, 0.82, 0.7, 0.55];
+  const base = 0.15; // calm/idle bar height fraction
 
   return (
-    <div className="flex h-5 items-end justify-center gap-[2px]">
+    <div className="flex h-5 w-full items-end justify-center gap-[1px] px-0.5">
       {bars.map((i) => {
-        const wave = 0.5 + 0.5 * Math.sin(time * 0.12 + phases[i]);
-        const height = base + amplitude * (1 - base) * wave * factors[i];
+        const wave = 0.5 + 0.5 * Math.sin(time * 0.15 + phases[i]);
+        const height = base + smoothAmp * (1 - base) * wave * factors[i];
         return (
           <span
             key={i}
-            className="w-[3px] rounded-full bg-white transition-[height] duration-75 ease-out"
+            className="flex-1 rounded-full bg-white"
             style={{ height: `${Math.max(base, height) * 100}%` }}
           />
         );

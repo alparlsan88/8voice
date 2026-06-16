@@ -305,9 +305,9 @@ fn handle_input(
         let sum_sq: f32 = final_samples.iter().map(|&s| s * s).sum();
         (sum_sq / final_samples.len() as f32).sqrt()
     };
-    // Heuristic normalization: quiet speech ~0.05-0.1 RMS, normal ~0.1-0.3,
-    // loud >0.3. Boost so normal speech produces a clearly visible wave.
-    let level = (rms * 5.0).min(1.0);
+    // Heuristic normalization: quiet speech ~0.02-0.05 RMS, normal ~0.05-0.15,
+    // loud >0.15. Stronger boost so even quiet speech moves the wave visibly.
+    let level = ((rms + 0.002) * 12.0).min(1.0);
     amplitude.store(level.to_bits(), Ordering::Relaxed);
 
     let mut b = buf.lock();

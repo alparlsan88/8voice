@@ -17,7 +17,7 @@ use settings::{ApiProvider, Settings};
 use state::{AppState, StateEvent, StateMachine};
 use std::sync::Arc;
 use tauri::{
-    menu::{Menu, MenuItem, PredefinedMenuItem},
+    menu::{ContextMenu, Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, WindowEvent,
 };
@@ -97,6 +97,7 @@ pub fn run() {
             cmd_toggle_recording,
             cmd_toggle_widget,
             cmd_open_settings,
+            cmd_widget_context_menu,
             onboarding::cmd_list_whisper_models,
             onboarding::cmd_download_whisper_model,
             onboarding::cmd_cancel_download,
@@ -566,5 +567,33 @@ fn cmd_toggle_widget(app: AppHandle) -> Result<(), String> {
 #[tauri::command]
 fn cmd_open_settings(app: AppHandle) -> Result<(), String> {
     open_settings(&app);
+    Ok(())
+}
+
+/// Shows a native context menu on the widget window with a "Quit" option.
+#[tauri::command]
+fn cmd_widget_context_menu(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
+    let webview_window = app
+        .get_webview_window("widget")
+        .ok_or("Widget window not found")?;
+    let window = webview_window.as_ref().window();
+
+    let quit = MenuItem::with_id(&app, "quit", "Quit 8voice", true, None::<&str>)
+        .map_err(|e| e.to_string())?;
+    let menu = Menu::with_items(&app, &[&quit]).map_err(|e| e.to_string())?;
+
+    let app_clone = app.clone();
+    window.on_menu_event(move |_, event| {
+        if event.id().as_ref() == "quit" {
+            app_clone.exit(0);
+        }
+    });
+
+    menu.popup_at(
+        window,
+        tauri::Position::Logical(tauri::LogicalPosition { x, y }),
+    )
+    .map_err(|e| e.to_string())?;
+
     Ok(())
 }

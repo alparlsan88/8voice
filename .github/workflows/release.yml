@@ -58,9 +58,17 @@ jobs:
 
       - name: Install LLVM and Clang (macOS only)
         if: matrix.platform == 'macos-latest'
-        run: |
-          brew install llvm
-          echo "LIBCLANG_PATH=$(brew --prefix llvm)/lib" >> "$GITHUB_ENV"
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "17"
+
+      - name: Set environment variables (macOS only)
+        if: matrix.platform == 'macos-latest'
+        run: echo "LIBCLANG_PATH=$(llvm-config --libdir)" >> "$GITHUB_ENV"
+
+      - name: Set environment variables (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> "$GITHUB_ENV"
 
       - name: Install frontend dependencies
         run: npm ci

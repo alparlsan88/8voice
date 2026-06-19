@@ -6,10 +6,11 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    permissions:
-      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -78,7 +79,7 @@ jobs:
         run: npm ci
 
       - name: Build and release Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
@@ -101,7 +102,7 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-      - name: Upload updater manifest
+      - name: Upload updater artifacts and manifest
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -116,34 +117,68 @@ jobs:
             Linux)    targets=("linux-x86_64") ;;
           esac
 
-          # Find the update archive signature file
+          # Find updater archive + sig files (tar.gz, msi.zip, nsis.zip, app.tar.gz)
           shopt -s nullglob
-          sig_files=(./*.sig ./target/**/*.sig ./src-tauri/target/**/*.sig)
-          sig=""
-          for f in "${sig_files[@]}"; do
-            case "$f" in
-              *.tar.gz.sig|*.msi.zip.sig|*.app.tar.gz.sig) sig="$f"; break ;;
-            esac
-          done
-          if [ -z "$sig" ]; then
-            for f in "${sig_files[@]}"; do
-              case "$f" in
-                *.exe.sig|*.msi.sig|*.dmg.sig|*.deb.sig|*.rpm.sig|*.AppImage.sig) continue ;;
-                *.sig) sig="$f"; break ;;
-              esac
-            done
+          shopt -s globstar
+          search_root="."
+
+          # On macOS universal build the bundles live under target/universal-apple-darwin
+          if [ -d "src-tauri/target/universal-apple-darwin/release/bundle" ]; then
+            search_root="src-tauri/target/universal-apple-darwin/release/bundle"
+          elif [ -d "src-tauri/target/release/bundle" ]; then
+            search_root="src-tauri/target/release/bundle"
           fi
 
-          if [ -z "$sig" ]; then
-            echo "::warning::No updater .sig file found — update manifest not uploaded"
-            find . -name "*.sig" 2>/dev/null | head -5
+          archive=""
+          sig=""
+
+          # Prefer updater-specific archives
+          for f in "$search_root"/**/*.{tar.gz,zip}; do
+            case "$f" in
+              *.app.tar.gz|*.nsis.zip|*.msi.zip|*.AppImage.tar.gz)
+                archive="$f"
+                ;;
+            esac
+          done
+          [ -z "$archive" ] && archive=$(ls "$search_root"/**/*.tar.gz 2>/dev/null | head -1)
+          [ -z "$archive" ] && archive=$(ls "$search_root"/**/*.zip 2>/dev/null | head -1)
+
+          if [ -n "$archive" ]; then
+            sig="${archive}.sig"
+            if [ ! -f "$sig" ]; then
+              sig="${archive%.tar.gz}.tar.gz.sig"
+              [ ! -f "$sig" ] && sig="${archive%.zip}.zip.sig"
+            fi
+          fi
+          [ ! -f "$sig" ] && sig=$(ls "$search_root"/**/*.sig 2>/dev/null | head -1)
+
+          if [ -z "$archive" ]; then
+            echo "::warning::No updater archive found — skipping upload"
             exit 0
           fi
 
-          signature=$(cat "$sig")
-          archive_name=$(basename "$sig" .sig)
           version="${GITHUB_REF_NAME#v}"
+          archive_name=$(basename "$archive")
 
+          # Upload the updater archive + sig first
+          echo "Uploading $archive_name..."
+          for i in 1 2 3 4 5; do
+            if gh release upload "${{ github.ref_name }}" "$archive" --clobber 2>/dev/null; then break; fi
+            sleep 5
+          done
+          if [ -f "$sig" ]; then
+            sig_name=$(basename "$sig")
+            echo "Uploading $sig_name..."
+            for i in 1 2 3 4 5; do
+              if gh release upload "${{ github.ref_name }}" "$sig" --clobber 2>/dev/null; then break; fi
+              sleep 5
+            done
+            signature=$(cat "$sig")
+          else
+            signature=""
+          fi
+
+          # Create per-target JSON manifests
           for target in "${targets[@]}"; do
             cat > "$target.json" <<EOJSON
           {
@@ -159,7 +194,6 @@ jobs:
                 echo "Uploaded $target.json"
                 break
               fi
-              echo "Retry $i/5..."
               sleep 5
             done
           done

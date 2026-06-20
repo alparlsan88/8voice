@@ -78,18 +78,25 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Write signing key to file
+      - name: Verify signing key format
         shell: bash
         run: |
-          printf '%s' "${{ secrets.TAURI_PRIVATE_KEY }}" > /tmp/tauri_signing_key
-          chmod 600 /tmp/tauri_signing_key
-          echo "Key written, size: $(wc -c < /tmp/tauri_signing_key) bytes"
+          key="${{ secrets.TAURI_PRIVATE_KEY }}"
+          echo "Key length: ${#key} characters"
+          decoded=$(printf '%s' "$key" | base64 -d 2>&1) && echo "Base64 decode: OK" || echo "Base64 decode: FAILED - $decoded"
+          firstline=$(printf '%s' "$decoded" | head -n 1)
+          echo "First line: $firstline"
+          if [ "$firstline" = "untrusted comment: rsign encrypted secret key" ]; then
+            echo "Key format: VALID"
+          else
+            echo "Key format: UNEXPECTED - '$firstline'"
+          fi
 
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY_PATH: /tmp/tauri_signing_key
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           MACOSX_DEPLOYMENT_TARGET: '10.15'
           CMAKE_OSX_DEPLOYMENT_TARGET: '10.15'
         with:

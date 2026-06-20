@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.34] - 2026-06-20
+
+### Fixed
+
+- CI signing was failing with "incorrect updater private key password" — regenerated passwordless signing key pair to eliminate password mismatch issues.
+
+### Changed
+
+- Removed `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` from CI workflow (new key has no password).
+
 ## [0.2.31] - 2026-06-20
 
 ### Fixed

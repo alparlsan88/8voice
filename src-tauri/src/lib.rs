@@ -815,6 +815,8 @@ fn play_beep_wav(ascending: bool) {
     if std::fs::write(&tmp, &buf).is_ok() {
         #[cfg(windows)]
         {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
             let _ = std::process::Command::new("powershell")
                 .args([
                     "-c",
@@ -823,6 +825,7 @@ fn play_beep_wav(ascending: bool) {
                         tmp.display().to_string().replace('\'', "''")
                     ),
                 ])
+                .creation_flags(CREATE_NO_WINDOW)
                 .spawn();
         }
         #[cfg(not(windows))]

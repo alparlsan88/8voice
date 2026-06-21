@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Floating widget redesigned: narrower width (90px), reduced padding and gap, smaller logo button (24px), subtle border, vertical divider between logo and text, centered status text/wave/spinner, wave bars restored to white.
+
 ## [0.2.38] - 2026-06-20
 
 ### Changed

@@ -70,7 +70,7 @@ export default function Widget() {
     // Rectangular body: draggable, sharp corners blend with the transparent window.
     <main
       data-tauri-drag-region
-      className="flex h-screen w-screen select-none items-center gap-2 overflow-hidden rounded-none bg-neutral-800/95 px-2 shadow-[0_4px_24px_rgba(0,0,0,0.5),0_0_20px_-4px_rgba(255,255,255,0.15)] ring-1 ring-white/25"
+      className="flex h-screen w-[90px] select-none items-center gap-1 overflow-hidden rounded-none bg-neutral-800/95 px-0.5 border border-white/20 shadow-[0_4px_24px_rgba(0,0,0,0.5),0_0_20px_-4px_rgba(255,255,255,0.15)]"
     >
       {/* Left: logo button — no drag-region, clickable.
           Disabled while loading (recording has already finished). */}
@@ -86,29 +86,31 @@ export default function Widget() {
               ? "Stop recording"
               : "Start recording"
         }
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm transition active:scale-95 focus:outline-none disabled:opacity-60"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white shadow-sm transition active:scale-95 focus:outline-none disabled:opacity-60"
       >
         <img src="/logo.svg" alt="" className="h-full w-full" />
       </button>
 
-      {/* Right: status indicator area — drag-region.
-          - idle/error: "8voice" text
-          - recording: animated wave (speaking)
-          - transcribing/injecting: spinner */}
-      <div
-        data-tauri-drag-region
-        className="flex h-7 flex-1 items-center justify-center"
-      >
-        {loading ? (
+      {/* Vertical divider */}
+      <div className="h-4 w-px bg-white/25" />
+
+      {/* Status: spinner / wave / text.
+          Wave fills remaining space; text sits inline without extra gaps. */}
+      {loading ? (
+        <div data-tauri-drag-region className="flex flex-1 items-center justify-center">
           <Spinner />
-        ) : state === "recording" ? (
+        </div>
+      ) : state === "recording" ? (
+        <div data-tauri-drag-region className="flex flex-1 items-center justify-center">
           <WaveIndicator amplitude={amplitude} />
-        ) : (
-          <span className="whitespace-nowrap px-2 text-xs font-semibold tracking-tight text-white">
+        </div>
+      ) : (
+        <div data-tauri-drag-region className="flex flex-1 items-center justify-center">
+          <span className="whitespace-nowrap text-xs font-semibold tracking-tight text-white">
             8voice
           </span>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   );
 }

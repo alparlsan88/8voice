@@ -24,7 +24,7 @@
         "title": "8voice",
         "label": "widget",
         "url": "widget.html",
-        "width": 130,
+        "width": 90,
         "height": 40,
         "resizable": false,
         "decorations": false,

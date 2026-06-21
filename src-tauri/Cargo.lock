@@ -1103,7 +1103,7 @@ checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
 name = "eightvoice"
-version = "0.2.28"
+version = "0.2.38"
 dependencies = [
  "anyhow",
  "arboard",

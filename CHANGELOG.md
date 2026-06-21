@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Floating widget redesigned: narrower width (90px), reduced padding and gap, smaller logo button (24px), subtle border, vertical divider between logo and text, centered status text/wave/spinner, wave bars restored to white.
+- Transcript now persists in clipboard after injection for easy Ctrl+V.
+- Recording start/stop feedback via system beep (Rust WAV generation with frequency sweep).
+
+### Added
+
+- `cmd_play_start_beep` / `cmd_play_stop_beep` Rust commands for melodic WAV beeps.
+- Pipeline step 4: clipboard copy via `arboard` after injection.
 
 ## [0.2.38] - 2026-06-20
 

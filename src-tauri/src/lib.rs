@@ -115,6 +115,8 @@ pub fn run() {
             cmd_start_recording,
             cmd_stop_recording,
             cmd_toggle_recording,
+            cmd_play_start_beep,
+            cmd_play_stop_beep,
             cmd_toggle_widget,
             cmd_open_settings,
             cmd_widget_context_menu,
@@ -571,6 +573,13 @@ pub fn run_pipeline(app: &AppHandle) {
         }
         sm.transition(&app, StateEvent::InjectionDone);
 
+        // 4) Keep transcript in clipboard so user can Ctrl+V anywhere
+        if let Err(e) = arboard::Clipboard::new()
+            .and_then(|mut cb| cb.set_text(&text))
+        {
+            tracing::error!("Failed to copy transcript to clipboard: {e:#}");
+        }
+
         let _ = app.emit("app://transcript", &text);
     });
 }
@@ -740,6 +749,86 @@ fn cmd_toggle_recording(app: AppHandle) -> Result<(), String> {
 fn cmd_toggle_widget(app: AppHandle) -> Result<(), String> {
     toggle_widget(&app);
     Ok(())
+}
+
+/// Play a melodic ascending beep — recording started.
+#[tauri::command]
+fn cmd_play_start_beep() {
+    play_beep_wav(true);
+}
+
+/// Play a melodic descending beep — recording stopped.
+#[tauri::command]
+fn cmd_play_stop_beep() {
+    play_beep_wav(false);
+}
+
+/// Generate a WAV buffer with a frequency sweep and play it via system sound.
+fn play_beep_wav(ascending: bool) {
+    let sample_rate = 22050u32;
+    let duration = 0.22;
+    let n_samples = (sample_rate as f64 * duration) as usize;
+    let freq_start = if ascending { 440.0 } else { 880.0 };
+    let freq_end = if ascending { 880.0 } else { 440.0 };
+    let vol: f64 = 0.35;
+
+    let data_size = n_samples * 2;
+    let mut buf = Vec::with_capacity(44 + data_size);
+
+    // RIFF
+    buf.extend_from_slice(b"RIFF");
+    buf.extend_from_slice(&(36 + data_size as u32).to_le_bytes());
+    buf.extend_from_slice(b"WAVE");
+    // fmt
+    buf.extend_from_slice(b"fmt ");
+    buf.extend_from_slice(&16u32.to_le_bytes());
+    buf.extend_from_slice(&1u16.to_le_bytes()); // PCM
+    buf.extend_from_slice(&1u16.to_le_bytes()); // mono
+    buf.extend_from_slice(&sample_rate.to_le_bytes());
+    buf.extend_from_slice(&(sample_rate * 2).to_le_bytes());
+    buf.extend_from_slice(&2u16.to_le_bytes());
+    buf.extend_from_slice(&16u16.to_le_bytes());
+    // data
+    buf.extend_from_slice(b"data");
+    buf.extend_from_slice(&(data_size as u32).to_le_bytes());
+
+    for i in 0..n_samples {
+        let t = i as f64 / sample_rate as f64;
+        let frac = t / duration;
+        let freq = freq_start + (freq_end - freq_start) * frac;
+        let envelope = if frac < 0.04 {
+            frac / 0.04
+        } else if frac > 0.82 {
+            (1.0 - frac) / 0.18
+        } else {
+            1.0
+        };
+        let val = ((freq * 2.0 * std::f64::consts::PI * t).sin() * envelope * vol * 32767.0) as i16;
+        buf.extend_from_slice(&val.to_le_bytes());
+    }
+
+    // Write to temp file and play
+    let tmp = std::env::temp_dir().join("8voice_beep.wav");
+    if std::fs::write(&tmp, &buf).is_ok() {
+        #[cfg(windows)]
+        {
+            let _ = std::process::Command::new("powershell")
+                .args([
+                    "-c",
+                    &format!(
+                        "(New-Object System.Media.SoundPlayer '{}').PlaySync()",
+                        tmp.display().to_string().replace('\'', "''")
+                    ),
+                ])
+                .spawn();
+        }
+        #[cfg(not(windows))]
+        {
+            let _ = std::process::Command::new("aplay")
+                .arg(&tmp)
+                .spawn();
+        }
+    }
 }
 
 /// Open settings window (callable from frontend).

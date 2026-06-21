@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
+/** Musical beep via Rust backend. */
+function playBeep(kind: "start" | "stop") {
+  invoke(kind === "start" ? "cmd_play_start_beep" : "cmd_play_stop_beep").catch(() => {});
+}
+
 // --- Types (must match backend) ---
 
 type AppState =
@@ -37,6 +42,12 @@ export default function Widget() {
         "app://state-changed",
         (e) => {
           setState(e.payload.state);
+          // Musical beep on recording start/stop
+          if (e.payload.state === "recording") {
+            playBeep("start");
+          } else if (e.payload.previous === "recording") {
+            playBeep("stop");
+          }
           // Reset amplitude when recording stops so the wave goes flat.
           if (e.payload.state !== "recording") {
             setAmplitude(0);
@@ -75,9 +86,11 @@ export default function Widget() {
       {/* Left: logo button — no drag-region, clickable.
           Disabled while loading (recording has already finished). */}
       <button
-        onClick={() =>
-          !loading && invoke("cmd_toggle_recording").catch(console.error)
-        }
+        onClick={() => {
+          if (!loading) {
+            invoke("cmd_toggle_recording").catch(console.error);
+          }
+        }}
         disabled={loading}
         title={
           loading
